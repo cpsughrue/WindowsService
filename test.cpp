@@ -70,8 +70,7 @@ void UninstallService() {
     return;
   }
 
-  SC_HANDLE schService = OpenService(
-      schSCManager, ServiceName, SERVICE_STOP | SERVICE_QUERY_STATUS | DELETE);
+  SC_HANDLE schService = OpenService(schSCManager, ServiceName, SERVICE_STOP | SERVICE_QUERY_STATUS | DELETE);
   if (schService == NULL) {
     std::cerr << "Service does not exist" << std::endl;
     CloseServiceHandle(schSCManager);
@@ -81,8 +80,7 @@ void UninstallService() {
   // Check the current status of the service
   SERVICE_STATUS_PROCESS ssp;
   DWORD bytesNeeded;
-  if (!QueryServiceStatusEx(schService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp,
-                            sizeof(SERVICE_STATUS_PROCESS), &bytesNeeded)) {
+  if (!QueryServiceStatusEx(schService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(SERVICE_STATUS_PROCESS), &bytesNeeded)) {
     std::cerr << "QueryServiceStatusEx failed: " << GetLastError() << std::endl;
     CloseServiceHandle(schService);
     CloseServiceHandle(schSCManager);
@@ -90,18 +88,14 @@ void UninstallService() {
   }
 
   // Stop the service if it is running
-  if (ssp.dwCurrentState != SERVICE_STOPPED &&
-      ssp.dwCurrentState != SERVICE_STOP_PENDING) {
-    if (!ControlService(schService, SERVICE_CONTROL_STOP,
-                        (LPSERVICE_STATUS)&ssp)) {
+  if (ssp.dwCurrentState != SERVICE_STOPPED && ssp.dwCurrentState != SERVICE_STOP_PENDING) {
+    if (!ControlService(schService, SERVICE_CONTROL_STOP, (LPSERVICE_STATUS)&ssp)) {
       std::cerr << "ControlService failed: " << GetLastError() << std::endl;
     } else {
       std::cout << "Stopping service..." << std::endl;
       Sleep(1000);
 
-      while (QueryServiceStatusEx(schService, SC_STATUS_PROCESS_INFO,
-                                  (LPBYTE)&ssp, sizeof(SERVICE_STATUS_PROCESS),
-                                  &bytesNeeded)) {
+      while (QueryServiceStatusEx(schService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(SERVICE_STATUS_PROCESS), &bytesNeeded)) {
         if (ssp.dwCurrentState == SERVICE_STOPPED)
           break;
 
@@ -112,7 +106,7 @@ void UninstallService() {
 
   // Delete the service
   if (!DeleteService(schService)) {
-    std::cerr << "DeleteService failed: " << GetLastError() << std::endl;
+    std::cerr << "DeleteService faileddd: " << GetLastError() << std::endl;
   } else {
     std::cout << "Service uninstalled successfully" << std::endl;
   }
@@ -151,18 +145,35 @@ void ServiceCtrlHandlerStopService() {
 }
 
 VOID WINAPI ServiceCtrlHandler(DWORD CtrlCode) {
+  SC_HANDLE schSCManager = NULL;
+  SC_HANDLE schService = NULL;
+
   switch (CtrlCode) {
-  case SERVICE_CONTROL_STOP:
+  case SERVICE_CONTROL_STOP: {
     if (ServiceStatus.dwCurrentState != SERVICE_RUNNING)
       break;
     ServiceCtrlHandlerStopService();
+  }
+  case SERVICE_CONTROL_SHUTDOWN: {
+    ServiceCtrlHandler(SERVICE_CONTROL_STOP);
 
-  case SERVICE_CONTROL_SHUTDOWN:
-    ServiceCtrlHandlerStopService();
-    SC_HANDLE schService = OpenService(schSCManager, ServiceName, SERVICE_STOP | SERVICE_QUERY_STATUS | DELETE);
+    SC_HANDLE schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+    if (schSCManager == NULL) {
+      CloseServiceHandle(schSCManager);
+      break;
+    }
+    SC_HANDLE schService = OpenService(schSCManager, ServiceName, DELETE);
+    if (schService == NULL) {
+      CloseServiceHandle(schService);
+      break;
+    }
+
     DeleteService(schService);
-    return;
 
+    CloseServiceHandle(schSCManager);
+    CloseServiceHandle(schService);
+    return;
+  }
   default:
     break;
   }
@@ -214,8 +225,7 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv) {
   while (1) {
 
     Sleep(2000);
-    WriteToFile("Writing to service file",
-                "C:\\Program Files\\WindowsLog\\log.txt");
+    WriteToFile("Writing to service file", "C:\\Program Files\\WindowsLog\\log.txt");
 
     // Break if service stop event is signaled
     if (WaitForSingleObject(ServiceStopEvent, 0) == WAIT_OBJECT_0) {
