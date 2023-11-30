@@ -236,6 +236,8 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv) {
   return;
 }
 
+
+// ModuleBuildDaemonServer.forkDaemon();
 int main(int argc, char *argv[]) {
 
   if (argc > 1) {
@@ -252,6 +254,11 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  // ServiceMain will create the socket and start listening for connections
+  // Hopefully "ServiceMain" will be identical on unix and windows
+  // On windows "ServiceMain" will have it's own execution context and will have to recreate the ModuleBuildDaemonServer
+  //  this might be a good reason to run the fork before ModuleBuildDaemonServer is created. Then the creation
+  //  of that ModuleBuildDaemonServer can fall inside "ServiceMain" 
   SERVICE_TABLE_ENTRY ServiceTable[] = {
       {(LPSTR)ServiceName, (LPSERVICE_MAIN_FUNCTION)ServiceMain}, {NULL, NULL}};
 
